@@ -16,6 +16,8 @@ phases:
     continueOnError: true
     inputs:
       buildType: 'specific'
+      project: 'libgit2'
+      pipeline: 'libgit2 experimental'
       buildVersionToDownload: 'latest'
       artifactName: 'mingw-amd64'
       downloadPath: '$(Agent.TempDirectory)\mingw64'
