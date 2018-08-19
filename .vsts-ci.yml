@@ -180,6 +180,12 @@ phases:
   queue:
     name: Hosted
   steps:
+  - task: DownloadBuildArtifacts@0
+    displayName: Download Cached Artifacts
+    continueOnError: true
+    inputs:
+      artifactName: 'mingw-amd64'
+      downloadPath: '$(Agent.TempDirectory)\mingw64'
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
     env:
@@ -192,6 +198,11 @@ phases:
       PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Cached Artifacts
+    inputs:
+      pathToPublish: '$(Agent.TempDirectory)\mingw64'
+      artifactName: 'mingw-amd64'
 
 - phase: windows_mingw_x86
   displayName: 'Windows (MinGW; x86)'
