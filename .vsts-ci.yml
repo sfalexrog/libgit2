@@ -56,6 +56,30 @@ jobs:
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
 
+- job: linux_xenial_arm32
+  displayName: 'Linux (Xenial; arm32)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: ci/vsts-docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/xenial-arm32:test'
+      environmentVariables: |
+       SKIP_PROXY_TESTS=true
+
+- job: linux_xenial_arm64
+  displayName: 'Linux (Xenial; arm64)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: ci/vsts-docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/xenial-arm64:test'
+      environmentVariables: |
+       SKIP_PROXY_TESTS=true
+
 - job: macos
   displayName: 'macOS'
   pool:

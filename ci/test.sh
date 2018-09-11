@@ -70,6 +70,10 @@ fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
 	echo "Starting HTTP proxy..."
+	echo ""
+	echo "Java version:"
+	java -version
+
 	curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.2.0/poxyproxy-0.2.0.jar >poxyproxy.jar
 	java -jar poxyproxy.jar -d --address 127.0.0.1 --port 8080 --credentials foo:bar &
 fi
