@@ -86,7 +86,7 @@ typedef struct git_index_entry {
 typedef enum {
 	GIT_IDXENTRY_EXTENDED  = (0x4000),
 	GIT_IDXENTRY_VALID     = (0x8000),
-} git_indxentry_flag_t;
+} git_idxentry_flag_t;
 
 #define GIT_IDXENTRY_STAGE(E) \
 	(((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
