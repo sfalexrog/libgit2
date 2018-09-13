@@ -56,53 +56,53 @@ jobs:
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
 
-- job: linux_xenial_x86_gcc
-  displayName: 'Linux (Xenial; x86; GCC)'
+- job: linux_bionic_x86_gcc
+  displayName: 'Linux (Bionic; x86; GCC)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: ci/vsts-docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/xenial-x86:test'
+      imageName: 'libgit2/bionic-x86:test'
       environmentVariables: |
        CC=gcc
        LEAK_CHECK=valgrind
 
-- job: linux_xenial_x86_clang
-  displayName: 'Linux (Xenial; x86; Clang)'
+- job: linux_bionic_x86_clang
+  displayName: 'Linux (Bionic; x86; Clang)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: ci/vsts-docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/xenial-x86:test'
+      imageName: 'libgit2/bionic-x86:test'
       environmentVariables: |
        CC=clang
        LEAK_CHECK=valgrind
 
-- job: linux_xenial_arm32
-  displayName: 'Linux (Xenial; arm32; GCC)'
+- job: linux_bionic_arm32
+  displayName: 'Linux (Bionic; arm32; GCC)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: ci/vsts-docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/xenial-arm32:test'
+      imageName: 'libgit2/bionic-arm32:test'
       environmentVariables: |
        SKIP_PROXY_TESTS=true
 
-- job: linux_xenial_arm64
-  displayName: 'Linux (Xenial; arm64; GCC)'
+- job: linux_bionic_arm64
+  displayName: 'Linux (Bionic; arm64; GCC)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
   - template: ci/vsts-docker.yml
     parameters:
       qemu: 'true'
-      imageName: 'libgit2/xenial-arm64:test'
+      imageName: 'libgit2/bionic-arm64:test'
       environmentVariables: |
        SKIP_PROXY_TESTS=true
 
