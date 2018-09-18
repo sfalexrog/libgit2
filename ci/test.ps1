@@ -7,6 +7,7 @@ $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
 
 $SourceDir = Split-Path (Split-Path (Get-Variable MyInvocation).Value.MyCommand.Path)
 $BuildDir = Get-Location
+$Success = $true
 
 if ($Env:SKIP_TESTS) { exit }
 
@@ -19,14 +20,12 @@ function run_test {
 	$TestName = $args[0]
 
 	$TestCommand = (ctest -N -V -R "^$TestName$") -join "`n" -replace "(?ms).*\n^[0-9]*: Test command: ","" -replace "\n.*",""
-	$TestCommand = "C:\LibGit2\libgit2-2\build\Debug\libgit2_clar.exe -sa"
-
 	$TestCommand += " -r${BuildDir}\results_${TestName}.xml"
 
 	Write-Host $TestCommand
 	Invoke-Expression $TestCommand
 
-	if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+	if ($LastExitCode -ne 0) { $Success = $false }
 }
 
 Write-Host "##############################################################################"
@@ -69,3 +68,5 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 
 	taskkill /F /IM javaw.exe
 }
+
+if (-not $Success) { exit 1 }
