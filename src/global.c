@@ -367,7 +367,7 @@ int git_libgit2_shutdown(void)
 	int ret;
 
 	/* Shut down any subsystems that have global state */
-	if (ret = git_atomic_dec(&git__n_inits))
+	if ((ret = git_atomic_dec(&git__n_inits)))
 		git__shutdown();
 
 	return ret;
