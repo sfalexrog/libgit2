@@ -493,11 +493,22 @@ IF (BUILD_CLAR)
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
 	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+	target_sources(libgit2_clar PRIVATE
+			deps/http-parser/http_parser.c
+			src/streams/mbedtls.c
+			src/streams/openssl_stream.c
+			)
+	#add_executable(libgit2_clar ${SRC_OS} ${SRC_CLAR} ${SRC_TEST})
 
-	target_link_libraries(libgit2_clar ${SSL_LIBRARIES})
-	target_link_libraries(libgit2_clar ${SSH_LIBRARIES})
-	target_link_libraries(libgit2_clar ${GSSAPI_LIBRARIES})
-	target_link_libraries(libgit2_clar ${ICONV_LIBRARIES})
+	target_include_directories(libgit2_clar PRIVATE src include deps/http-parser)
+
+	#target_link_libraries(libgit2_clar PRIVATE git2)
+	target_link_libraries(libgit2_clar PRIVATE git2 mbedTLS::mbedTLS_static)
+	target_compile_definitions(libgit2_clar PRIVATE GIT_SSL GIT_SSL_MBEDTLS)
+	target_link_libraries(libgit2_clar PRIVATE ${SSL_LIBRARIES})
+	target_link_libraries(libgit2_clar PRIVATE ${SSH_LIBRARIES})
+	target_link_libraries(libgit2_clar PRIVATE ${GSSAPI_LIBRARIES})
+	target_link_libraries(libgit2_clar PRIVATE ${ICONV_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
 	MSVC_SPLIT_SOURCES(libgit2_clar)
 

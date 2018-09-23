@@ -7,6 +7,8 @@
 
 #ifdef GIT_SSL
 
+#ifdef GIT_SSL_OPENSSL
+
 #include <ctype.h>
 
 #include "global.h"
@@ -380,5 +382,7 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	giterr_set(GITERR_SSL, "openssl is not supported in this version");
 	return -1;
 }
+
+#endif
 
 #endif
