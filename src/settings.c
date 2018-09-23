@@ -6,7 +6,12 @@
  */
 
 #ifdef GIT_SSL
+#if defined(GIT_SSL_OPENSSL)
 # include <openssl/err.h>
+#elif defined(GIT_SSL_MBEDTLS)
+# include <mbedtls/error.h>
+# include "streams/mbedtls.h"
+#endif
 #endif
 
 #include <git2.h>
@@ -139,6 +144,7 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_SET_SSL_CERT_LOCATIONS:
 #ifdef GIT_SSL
+#if defined(GIT_SSL_OPENSSL)
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
@@ -148,6 +154,21 @@ int git_libgit2_opts(int key, ...)
 				error = -1;
 			}
 		}
+#elif defined(GIT_SSL_MBEDTLS)
+		{
+			const char *file = va_arg(ap, const char*);
+			const char *path = va_arg(ap, const char*);
+			if (file)
+			{
+				error = git_mbedtls__set_cert_location(file, 0);
+			}
+			// Backporting: original had && here, but not sure about the logic behind that
+			if (error || path)
+			{
+				error = git_mbedtls__set_cert_location(path, 1);
+			}
+		}
+#endif
 #else
 		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL is not enabled");
 		error = -1;

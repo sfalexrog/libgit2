@@ -13,7 +13,8 @@
 #include "smart.h"
 #include "auth.h"
 #include "auth_negotiate.h"
-#include "openssl_stream.h"
+#include "streams/openssl_stream.h"
+#include "streams/mbedtls.h"
 #include "socket_stream.h"
 
 git_http_auth_scheme auth_schemes[] = {
@@ -545,7 +546,13 @@ static int http_connect(http_subtransport *t)
 	}
 
 	if (t->connection_data.use_ssl) {
+#if defined(GIT_SSL_OPENSSL)
 		error = git_openssl_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+#elif defined(GIT_SSL_MBEDTLS)
+		error = git_mbedtls_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+#else
+#error "Attempted to build without SSL support"
+#endif
 	} else {
 		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
 	}

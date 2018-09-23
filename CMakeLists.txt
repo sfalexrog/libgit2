@@ -10,9 +10,11 @@
 #
 # Install:
 # > cmake --build . --target install
+# --- Note 23.09.2018: Updating the project to be somewhat saner
 
-PROJECT(libgit2 C)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+# Rely on a more recent Git version
+cmake_minimum_required(VERSION 3.1)
+project(libgit2 C)
 
 # Add find modules to the path
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
@@ -40,6 +42,7 @@ OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 
+add_library(git2 "")
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
 ENDIF()
@@ -65,9 +68,9 @@ IF(MSVC)
 	# path to libssh2
 	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
 
-	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
-	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
-	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+	target_compile_definitions(git2 PRIVATE _SCL_SECURE_NO_WARNINGS)
+	target_compile_definitions(git2 PRIVATE _CRT_SECURE_NO_DEPRECATE)
+	target_compile_definitions(git2 PRIVATE _CRT_NONSTDC_NO_DEPRECATE)
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -87,19 +90,19 @@ SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
 
 FUNCTION(TARGET_OS_LIBRARIES target)
 	IF(WIN32)
-		TARGET_LINK_LIBRARIES(${target} ws2_32)
+		target_link_libraries(${target} PRIVATE ws2_32)
 	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-		TARGET_LINK_LIBRARIES(${target} socket nsl)
+		target_link_libraries(${target} PRIVATE socket nsl)
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lsocket -lnsl" PARENT_SCOPE)
 	ENDIF()
 	CHECK_LIBRARY_EXISTS(rt clock_gettime "time.h" NEED_LIBRT)
 	IF(NEED_LIBRT)
-		TARGET_LINK_LIBRARIES(${target} rt)
+		target_link_libraries(${target} PRIVATE rt)
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lrt" PARENT_SCOPE)
 	ENDIF()
 
 	IF(THREADSAFE)
-		TARGET_LINK_LIBRARIES(${target} ${CMAKE_THREAD_LIBS_INIT})
+		target_link_libraries(${target} PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 	ENDIF()
 ENDFUNCTION()
 
@@ -137,18 +140,20 @@ FILE(STRINGS "include/git2/version.h" GIT2_HEADER_SOVERSION REGEX "^#define LIBG
 STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "${GIT2_HEADER_SOVERSION}")
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(src include)
+target_include_directories(git2
+		PUBLIC include
+		PRIVATE src)
 
 IF (WIN32 AND EMBED_SSH_PATH)
 	FILE(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
-	INCLUDE_DIRECTORIES("${EMBED_SSH_PATH}/include")
+	target_include_directories(git2 "${EMBED_SSH_PATH}/include")
 	FILE(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
-	ADD_DEFINITIONS(-DGIT_SSH)
+	target_compile_definitions(git2 PRIVATE GIT_SSH)
 ENDIF()
 
 IF (WIN32 AND WINHTTP AND NOT MINGW)
-	ADD_DEFINITIONS(-DGIT_WINHTTP)
-	INCLUDE_DIRECTORIES(deps/http-parser)
+	target_compile_definitions(git2 PRIVATE GIT_WINHTTP)
+	target_include_directories(git2 deps/http-parser)
 	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 ELSE ()
 	IF (NOT AMIGA)
@@ -157,12 +162,12 @@ ELSE ()
 
 	FIND_PACKAGE(HTTP_Parser)
 	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
-		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
-		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+		target_include_directories(git2 PRIVATE ${HTTP_PARSER_INCLUDE_DIRS})
+		target_link_libraries(git2 ${HTTP_PARSER_LIBRARIES})
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lhttp_parser")
 	ELSE()
 		MESSAGE(STATUS "http-parser was not found or is too old; using bundled 3rd-party sources.")
-		INCLUDE_DIRECTORIES(deps/http-parser)
+		target_include_directories(git2 PRIVATE deps/http-parser)
 		FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 	ENDIF()
 ENDIF()
@@ -191,7 +196,7 @@ ENDIF()
 
 # Include POSIX regex when it is required
 IF(WIN32 OR AMIGA OR ANDROID OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	INCLUDE_DIRECTORIES(deps/regex)
+	target_include_directories(git2 PRIVATE deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
@@ -229,7 +234,7 @@ IF (USE_GSSAPI)
 	FIND_PACKAGE(GSSAPI)
 ENDIF()
 IF (GSSAPI_FOUND)
-	ADD_DEFINITIONS(-DGIT_GSSAPI)
+	target_compile_definitions(git2 PRIVATE GIT_GSSAPI)
 ENDIF()
 
 # Optional external dependency: iconv
@@ -237,8 +242,8 @@ IF (USE_ICONV)
 	FIND_PACKAGE(Iconv)
 ENDIF()
 IF (ICONV_FOUND)
-	ADD_DEFINITIONS(-DGIT_USE_ICONV)
-	INCLUDE_DIRECTORIES(${ICONV_INCLUDE_DIR})
+	target_compile_definitions(git2 PRIVATE GIT_USE_ICONV)
+	target_include_directories(git2 ${ICONV_INCLUDE_DIR})
 	SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} ${ICONV_LIBRARIES}")
 ENDIF()
 
@@ -249,11 +254,12 @@ IF (MSVC)
 
 	# /GF - String pooling
 	# /MP - Parallel build
-	SET(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
+	target_compile_options(git2 PRIVATE /GF /MP /nologo)
 
 	IF (STDCALL)
 		# /Gz - stdcall calling convention
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
+		#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
+		target_compile_options(git2 PRIVATE /Gz)
 	ENDIF ()
 
 	IF (STATIC_CRT)
@@ -315,11 +321,14 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra ${CMAKE_C_FLAGS}")
+	#SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra ${CMAKE_C_FLAGS}")
+	target_compile_options(git2 PRIVATE
+			-D_GNU_SOURCE
+			)
 
-	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-		SET(CMAKE_C_FLAGS "-std=c99 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
-	ENDIF()
+	#IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+#		SET(CMAKE_C_FLAGS "-std=c99 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
+#	ENDIF()
 
 	IF (WIN32 AND NOT CYGWIN)
 		SET(CMAKE_C_FLAGS_DEBUG "-D_DEBUG")
@@ -330,12 +339,13 @@ ELSE ()
 		# MinGW >= 3.14 uses the C99-style stdio functions
 		# automatically, but forks like mingw-w64 still want
 		# us to define this in order to use them
-		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
+		target_compile_definitions(git2 PRIVATE -D__USE_MINGW_ANSI_STDIO=1)
 
 	ELSEIF (BUILD_SHARED_LIBS)
-		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
+		#ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
 
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+		#SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+		target_compile_options(git2 PRIVATE -fpic -fPIC -fvisibility=hidden)
 	ENDIF ()
 
 	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
@@ -366,9 +376,16 @@ ELSE()
 ENDIF()
 
 IF (OPENSSL_FOUND)
-  ADD_DEFINITIONS(-DGIT_SSL)
-  INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
+  target_compile_definitions(git2 PRIVATE GIT_SSL GIT_SSL_OPENSSL)
+  target_include_directories(git2 PRIVATE ${OPENSSL_INCLUDE_DIR})
   SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
+  target_sources(git2 PRIVATE src/streams/openssl_stream.c)
+# Building against mbedTLS
+elseif(TARGET mbedTLS::mbedTLS)
+  message(STATUS "Compiling against mbedTLS (which is being built alongside git2)")
+  target_compile_definitions(git2 PRIVATE GIT_SSL GIT_SSL_MBEDTLS)
+  target_sources(git2 PRIVATE src/streams/mbedtls.c)
+  target_link_libraries(git2 PRIVATE mbedTLS::mbedTLS_static)
 ENDIF()
 
 IF (THREADSAFE)
@@ -376,10 +393,10 @@ IF (THREADSAFE)
 		FIND_PACKAGE(Threads REQUIRED)
 	ENDIF()
 
-	ADD_DEFINITIONS(-DGIT_THREADS)
+	target_compile_definitions(git2 PRIVATE GIT_THREADS)
 ENDIF()
 
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
+target_compile_definitions(git2 PRIVATE _FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
 FILE(GLOB SRC_H include/git2.h include/git2/*.h include/git2/sys/*.h)
@@ -408,11 +425,11 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
-TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
-TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
-TARGET_LINK_LIBRARIES(git2 ${GSSAPI_LIBRARIES})
-TARGET_LINK_LIBRARIES(git2 ${ICONV_LIBRARIES})
+target_sources(git2 PRIVATE ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
+target_link_libraries(git2 ${SSL_LIBRARIES})
+target_link_libraries(git2 ${SSH_LIBRARIES})
+target_link_libraries(git2 ${GSSAPI_LIBRARIES})
+target_link_libraries(git2 ${ICONV_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
@@ -477,10 +494,10 @@ IF (BUILD_CLAR)
 
 	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
 
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
+	target_link_libraries(libgit2_clar ${SSL_LIBRARIES})
+	target_link_libraries(libgit2_clar ${SSH_LIBRARIES})
+	target_link_libraries(libgit2_clar ${GSSAPI_LIBRARIES})
+	target_link_libraries(libgit2_clar ${ICONV_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
 	MSVC_SPLIT_SOURCES(libgit2_clar)
 
@@ -515,3 +532,5 @@ ENDIF ()
 IF (BUILD_EXAMPLES)
 	ADD_SUBDIRECTORY(examples)
 ENDIF ()
+
+add_library(git2::git2 ALIAS git2)

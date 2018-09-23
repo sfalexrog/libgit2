@@ -12,11 +12,15 @@
 #include "stream.h"
 
 #ifdef GIT_SSL
+#if defined(GIT_SSL_OPENSSL)
 # include <openssl/ssl.h>
+#elif defined(GIT_SSL_MBEDTLS)
+# include <mbedtls/ssl.h>
+#endif
 #endif
 
 typedef struct gitno_ssl {
-#ifdef GIT_SSL
+#if defined(GIT_SSL) && defined(GIT_SSL_OPENSSL)
 	SSL *ssl;
 #else
 	size_t dummy;

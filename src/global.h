@@ -18,8 +18,12 @@ typedef struct {
 } git_global_st;
 
 #ifdef GIT_SSL
+#if defined(GIT_SSL_OPENSSL)
 # include <openssl/ssl.h>
 extern SSL_CTX *git__ssl_ctx;
+#elif defined(GIT_SSL_MBEDTLS)
+#include <mbedtls/ssl.h>
+#endif
 #endif
 
 git_global_st *git__global_state(void);
